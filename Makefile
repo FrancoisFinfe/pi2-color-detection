@@ -3,30 +3,36 @@
 
 CC = $(CROSS_COMPILE)gcc
 
+BCM2835_SRC_DIR = ../bcm2835-1.42.git/src
+
 # define any compile-time flags
 CFLAGS = -Wall -g
 
 
 # define any directories containing header files other than /usr/include
 
-INCLUDES = -I.
+INCLUDES = -I. -I$(BCM2835_SRC_DIR)
 
 
 # define library paths in addition to /usr/lib, -Lpath
 LFLAGS = 
 
 # define any libraries to link into executable:
-LIBS = -lm
+LIBS =
 
 # define the C source files
 
-SRCS = smbus.c testBMP085.c
+BCM2835_SRC = bcm2835.c
+
+
+SRCS = $(addprefix $(BCM2835_SRC_DIR)/,$(BCM2835_SRC))
+
 
 
 OBJS = $(SRCS:.c=.o)
 
 # define the executable file 
-MAIN = testBMP085
+MAIN = pi2-color-detection
 
 #
 # The following part of the makefile is generic; it can be used to 
@@ -36,11 +42,18 @@ MAIN = testBMP085
 
 .PHONY: depend clean
 
-all:    $(MAIN)
+all:    $(MAIN) blink-example
 	@echo  "$(MAIN) successfully compiled !"
 
-$(MAIN): $(OBJS) 
-	$(CC) $(CFLAGS) $(INCLUDES) -o $(MAIN) $(OBJS) $(LFLAGS) $(LIBS)
+blink-example: $(OBJS) blink-example.o
+	@echo "target blink"
+	$(CC) $(CFLAGS) $(INCLUDES) -o $@ $(OBJS) $@.o $(LFLAGS) $(LIBS)
+	@echo  "$@ successfully compiled !"
+
+
+$(MAIN): $(OBJS) $(MAIN).o
+	$(CC) $(CFLAGS) $(INCLUDES) -o $@ $(OBJS) $@.o $(LFLAGS) $(LIBS)
+	@echo  "$@ successfully compiled !"
 
 
 # this is a suffix replacement rule for building .o's from .c's
