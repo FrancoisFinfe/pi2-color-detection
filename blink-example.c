@@ -17,6 +17,7 @@
 // $Id: RF22.h,v 1.21 2012/05/30 01:51:25 mikem Exp $
 
 #include <bcm2835.h>
+#include "unistd.h"
 
 // Blinks on RPi Plug P1 pin 11 (which is GPIO pin 17)
 #define PIN RPI_GPIO_P1_11
@@ -34,7 +35,7 @@ int main(int argc, char **argv)
     // If you call this, it will not actually access the GPIO
     // Use for testing
 //    bcm2835_set_debug(1);
-	int i;
+	unsigned int i;
 
     if (!bcm2835_init())
 	return 1;
@@ -44,8 +45,6 @@ int main(int argc, char **argv)
 		bcm2835_gpio_fsel(ehw298_bcm2835_pin[i], BCM2835_GPIO_FSEL_OUTP);	
 	}
 
-    // Set the pin to be an output
-    bcm2835_gpio_fsel(PIN, BCM2835_GPIO_FSEL_OUTP);
 
     // Blink
     while (1)
