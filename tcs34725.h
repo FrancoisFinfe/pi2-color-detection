@@ -36,13 +36,8 @@
 #ifndef _TCS34725_H_
 #define _TCS34725_H_
 
-#if ARDUINO >= 100
- #include <Arduino.h>
-#else
- #include <WProgram.h>
-#endif
-
-#include <Wire.h>
+#include <stdint.h>
+#include <stdbool.h>
 
 #define TCS34725_ADDRESS          (0x29)
 
@@ -115,28 +110,49 @@ typedef enum
 }
 tcs34725Gain_t;
 
-class Adafruit_TCS34725 {
+
+typedef struct {
+    double h;       // angle in degrees
+    double s;       // percent
+    double v;       // percent
+} hsv_t;
+
+
+
+typedef struct {
+    double r;       // percent
+    double g;       // percent
+    double b;       // percent
+} rgb_t;
+
+
+class tcs34725 {
  public:
-  Adafruit_TCS34725(tcs34725IntegrationTime_t = TCS34725_INTEGRATIONTIME_2_4MS, tcs34725Gain_t = TCS34725_GAIN_1X);
+  tcs34725(const char *i2c_device_name, tcs34725IntegrationTime_t = TCS34725_INTEGRATIONTIME_2_4MS, tcs34725Gain_t = TCS34725_GAIN_1X);
   
-  boolean  begin(void);
+  bool  begin(void);
   void     setIntegrationTime(tcs34725IntegrationTime_t it);
   void     setGain(tcs34725Gain_t gain);
   void     getRawData(uint16_t *r, uint16_t *g, uint16_t *b, uint16_t *c);
   uint16_t calculateColorTemperature(uint16_t r, uint16_t g, uint16_t b);
+  hsv_t calculateRgbInt2Hsv(uint16_t r, uint16_t g, uint16_t b, uint16_t normalise_max);
   uint16_t calculateLux(uint16_t r, uint16_t g, uint16_t b);
-  void     write8 (uint8_t reg, uint32_t value);
+  void     write8 (uint8_t reg, uint8_t value);
   uint8_t  read8 (uint8_t reg);
   uint16_t read16 (uint8_t reg);
-  void setInterrupt(boolean flag);
+  void setInterrupt(bool flag);
   void clearInterrupt(void);
   void setIntLimits(uint16_t l, uint16_t h);
   void     enable(void);
 
  private:
-  boolean _tcs34725Initialised;
+  int i2c_begin(const char *dev_name);
+  int i2c_end(void);
+  bool _tcs34725Initialised;
   tcs34725Gain_t _tcs34725Gain;
-  tcs34725IntegrationTime_t _tcs34725IntegrationTime; 
+  tcs34725IntegrationTime_t _tcs34725IntegrationTime;
+  int fd;	// i2c_dev file descriptor
+  char i2c_dev_name[128];
   
   void     disable(void);
 };
