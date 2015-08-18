@@ -19,7 +19,7 @@
 
 #define RUNNINGAVERAGE_LIB_VERSION "0.2.08"
 
-#include "Arduino.h"
+#include <stdint.h>
 
 class RunningAverage
 {

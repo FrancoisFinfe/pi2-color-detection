@@ -27,6 +27,7 @@
 
 #include "RunningAverage.h"
 #include <stdlib.h>
+#include <math.h>
 
 RunningAverage::RunningAverage(uint8_t size)
 {
