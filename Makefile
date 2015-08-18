@@ -2,20 +2,24 @@
 
 
 CC = $(CROSS_COMPILE)gcc
+CXX = $(CROSS_COMPILE)g++
+
 
 BCM2835_SRC_DIR = ../bcm2835-1.42.git/src
+RUNNING_AVERAGE_SRC_DIR = arduLib/RunningAverage/
 
 # define any compile-time flags
 CFLAGS = -Wall -g
-
+# define any compile-time flags
+CXXFLAGS = -Wall -g -ansi
 
 # define any directories containing header files other than /usr/include
 
-INCLUDES = -I. -I$(BCM2835_SRC_DIR)
+INCLUDES = -I. -I$(BCM2835_SRC_DIR) -I$(RUNNING_AVERAGE_SRC_DIR)
 
 
 # define library paths in addition to /usr/lib, -Lpath
-LFLAGS = 
+LFLAGS = -lstdc++
 
 # define any libraries to link into executable:
 LIBS =
@@ -26,10 +30,13 @@ BCM2835_SRC = bcm2835.c
 
 
 SRCS = $(addprefix $(BCM2835_SRC_DIR)/,$(BCM2835_SRC))
+SRCS += smbus.c 
 
-
+CXXSRCS += tcs34725.cpp
+CXXSRCS += $(addprefix $(RUNNING_AVERAGE_SRC_DIR),RunningAverage.cpp)
 
 OBJS = $(SRCS:.c=.o)
+CXXOBJS = $(CXXSRCS:.cpp=.o)
 
 # define the executable file 
 MAIN = pi2-color-detection
@@ -43,7 +50,6 @@ MAIN = pi2-color-detection
 .PHONY: depend clean
 
 all:    $(MAIN) blink-example
-	@echo  "$(MAIN) successfully compiled !"
 
 blink-example: $(OBJS) blink-example.o
 	@echo "target blink"
@@ -51,14 +57,19 @@ blink-example: $(OBJS) blink-example.o
 	@echo  "$@ successfully compiled !"
 
 
-$(MAIN): $(OBJS) $(MAIN).o
-	$(CC) $(CFLAGS) $(INCLUDES) -o $@ $(OBJS) $@.o $(LFLAGS) $(LIBS)
+$(MAIN): $(OBJS) $(CXXOBJS) $(MAIN).o
+	$(CXX) $(CXXFLAGS) $(INCLUDES) -o $@ $(OBJS) $(CXXOBJS) $@.o $(LFLAGS) $(LIBS)
 	@echo  "$@ successfully compiled !"
+
+#	$(CC) $(CFLAGS) $(INCLUDES) -o objectc.o $(OBJS) $(LFLAGS) $(LIBS)
 
 
 # this is a suffix replacement rule for building .o's from .c's
 .c.o:
 	$(CC) $(CFLAGS) $(INCLUDES) -c $<  -o $@
+
+.cpp.o:
+	$(CXX) $(CXXFLAGS) $(INCLUDES) -c $<  -o $@
 
 clean:
 	$(RM) *.o *~ $(MAIN)
