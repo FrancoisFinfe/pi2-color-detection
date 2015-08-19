@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+
+	<xs:complexType name="float_spec_xt">
+		<xs:attribute name="min" type="xs:double" use="required"/>
+		<xs:attribute name="max" type="xs:double" use="required"/>
+	</xs:complexType>
+
+
+
+	<xs:complexType name="color_xt">
+		<xs:sequence>
+			<xs:element name="hue" type="float_spec_xt"/>
+			<xs:element name="lum" type="float_spec_xt"/>
+		</xs:sequence>
+		<xs:attribute name="description" type="xs:string" use="required"/>
+		<xs:attribute name="gpio_value" type="xs:unsignedInt" use="required"/>
+		<xs:attribute name="gpio_mask" type="xs:unsignedInt" use="required"/>
+	</xs:complexType>
+
+
+    <xs:element name="pi2-color-detect-config">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="color" type="color_xt" minOccurs="0" maxOccurs="unbounded"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+</xs:schema>
