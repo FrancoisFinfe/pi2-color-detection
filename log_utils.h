@@ -5,9 +5,12 @@
 #include <stdint.h>
 #include <stdarg.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 
-enum eMessageType{
+typedef enum{
 	GLOBAL_ERROR = -2,
 	ERROR = -1,
 	GLOBAL_SUCCESS = 0,
@@ -18,12 +21,16 @@ enum eMessageType{
 	DEBUG_TRACE = 5,
 	DDEBUG_TRACE = 6,
 
-};
+} message_type_t;
 
 
-void log_print(enum eMessageType type, enum eMessageType config_verb, char *format, ...);
-void log_hexdump(enum eMessageType verbosity, enum eMessageType config_verb, const unsigned char *data, int size);
+void log_print(message_type_t verbosity, message_type_t config_verb, const char *format, ...);
+void log_hexdump(message_type_t verbosity, message_type_t config_verb, const unsigned char *data, int size);
 
+
+#ifdef __cplusplus
+}
+#endif
 
 
 #endif

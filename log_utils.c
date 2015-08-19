@@ -10,7 +10,7 @@
 #include "log_utils.h"
 
 
-void log_hexdump(enum eMessageType verbosity, enum eMessageType config_verb, const unsigned char *data, int size)
+void log_hexdump(message_type_t verbosity, message_type_t config_verb, const unsigned char *data, int size)
 {
 	int i;
 
@@ -30,7 +30,7 @@ void log_hexdump(enum eMessageType verbosity, enum eMessageType config_verb, con
 }
 
 
-void log_print(enum eMessageType type, enum eMessageType config_verb, char *format, ...)
+void log_print(message_type_t type, message_type_t config_verb, const char *format, ...)
 {
 
 	FILE *stream;
