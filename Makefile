@@ -15,11 +15,11 @@ CXXFLAGS = -Wall -g -ansi
 
 # define any directories containing header files other than /usr/include
 
-INCLUDES = -I. -I$(BCM2835_SRC_DIR) -I$(RUNNING_AVERAGE_SRC_DIR)
+INCLUDES = -I. -I$(BCM2835_SRC_DIR) -I$(RUNNING_AVERAGE_SRC_DIR) -Ixsd -Ilibxsd
 
 
 # define library paths in addition to /usr/lib, -Lpath
-LFLAGS = -lstdc++
+LFLAGS = -lstdc++ -lxerces-c
 
 # define any libraries to link into executable:
 LIBS =
@@ -32,7 +32,7 @@ BCM2835_SRC = bcm2835.c
 SRCS = $(addprefix $(BCM2835_SRC_DIR)/,$(BCM2835_SRC))
 SRCS += smbus.c log_utils.c
 
-CXXSRCS += tcs34725.cpp
+CXXSRCS += tcs34725.cpp xsd/settings.cxx configuration.cpp
 CXXSRCS += $(addprefix $(RUNNING_AVERAGE_SRC_DIR),RunningAverage.cpp)
 
 OBJS = $(SRCS:.c=.o)
@@ -61,7 +61,9 @@ $(MAIN): $(OBJS) $(CXXOBJS) $(MAIN).o
 	$(CXX) $(CXXFLAGS) $(INCLUDES) -o $@ $(OBJS) $(CXXOBJS) $@.o $(LFLAGS) $(LIBS)
 	@echo  "$@ successfully compiled !"
 
-#	$(CC) $(CFLAGS) $(INCLUDES) -o objectc.o $(OBJS) $(LFLAGS) $(LIBS)
+
+xsd_cxx:
+	xsdcxx cxx-tree --output-dir ./xsd xsd/settings.xsd
 
 
 # this is a suffix replacement rule for building .o's from .c's
