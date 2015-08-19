@@ -117,6 +117,11 @@ typedef struct {
     double v;       // percent
 } hsv_t;
 
+typedef struct {
+    double h;       // angle in degrees
+    double s;       // percent
+    double l;       // percent
+} hsl_t;
 
 
 typedef struct {
@@ -136,6 +141,8 @@ class tcs34725 {
   void     getRawData(uint16_t *r, uint16_t *g, uint16_t *b, uint16_t *c);
   uint16_t calculateColorTemperature(uint16_t r, uint16_t g, uint16_t b);
   hsv_t calculateRgbInt2Hsv(uint16_t r, uint16_t g, uint16_t b, uint16_t normalise_max);
+  hsl_t calculateRgbInt2Hsl(uint16_t r, uint16_t g, uint16_t b, uint16_t normalise_max);
+
   uint16_t calculateLux(uint16_t r, uint16_t g, uint16_t b);
   void     write8 (uint8_t reg, uint8_t value);
   uint8_t  read8 (uint8_t reg);

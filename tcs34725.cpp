@@ -416,6 +416,31 @@ hsv_t tcs34725::calculateRgbInt2Hsv(uint16_t r, uint16_t g, uint16_t b, uint16_t
 }
 
 
+
+/**************************************************************************/
+/*!
+    @brief  Converts the raw R/G/B values to HSV.
+				normalise_max 
+*/
+/**************************************************************************/
+
+hsl_t tcs34725::calculateRgbInt2Hsl(uint16_t r, uint16_t g, uint16_t b, uint16_t normalise_max)
+{
+	hsv_t in;
+	hsl_t	out;	
+	in = calculateRgbInt2Hsv(r,g,b, normalise_max);
+
+	out.h = in.h;
+	out.l = (2 - in.s) * in.v;
+ 	out.s = in.s * in.v;
+ 	out.s /= (out.l <= 1) ? (out.l) : 2 - (out.l);
+ 	out.l /= 2;
+
+
+    return out;
+}
+
+
 /**************************************************************************/
 /*!
     @brief  Converts the raw R/G/B values to color temperature in degrees
