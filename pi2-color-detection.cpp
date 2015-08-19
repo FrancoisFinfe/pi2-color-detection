@@ -7,6 +7,7 @@
 #include "tcs34725.h"
 
 #include "RunningAverage.h"
+#include "configuration.hpp"
 
 #define AverageSamples 5
 
@@ -36,12 +37,14 @@ uint8_t ehw298_bcm2835_pin[] = {
 
 
 
-#define ehw298_gpio_count	4
+#define EHW298_GPIO_COUNT	4
+#define COLOR_CONFIG_COUNT	8
 
 uint16_t normalise_max_rgb;
-
 tcs34725 *tcs;
+configuration_context_t config_ctx;
 
+color_config_t color_configs[COLOR_CONFIG_COUNT];
 
 int init(void){
 	int res = 0;
@@ -52,7 +55,7 @@ int init(void){
 		return -1;
 	}
 
-	for(i=0; i<ehw298_gpio_count; i++){
+	for(i=0; i<EHW298_GPIO_COUNT; i++){
 		bcm2835_gpio_fsel(ehw298_bcm2835_pin[i], BCM2835_GPIO_FSEL_OUTP);	
 	}
 
@@ -68,6 +71,14 @@ int init(void){
 		return -2;		
 	}
 
+	res = configuration_init(&config_ctx, config_file_path, DEBUG_TRACE);
+
+	if(res < 0){
+		printf("Reading configuration failed\n");
+		return res;
+	}
+
+	configuration_get(&config_ctx, color_configs, COLOR_CONFIG_COUNT);
 
 	return res;
 		
