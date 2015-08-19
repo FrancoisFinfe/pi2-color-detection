@@ -14,8 +14,11 @@ Must be executed as root (sudo) to grant access to /dev/mem
 How to build
 ============
 
-make
-
+	make 
+	make make pi2-color-detection
+	make blink-example
+	
+This will build the 
 
 
 
