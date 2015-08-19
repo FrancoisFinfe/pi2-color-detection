@@ -1,0 +1,44 @@
+
+Command-line usage
+==================
+
+usage:  pi2-color-detection [options]
+Options are:
+ -h              help
+ -c              xml config file path (default = settings.xml)
+ -d              i2c dev name (default = /dev/i2c-1)
+
+Must be executed as root (sudo) to grant access to /dev/mem
+
+
+How to build
+============
+
+make
+
+
+
+
+How to regenerate the C++ tree / XML data binding
+=================================================	
+	make xsd_cxx
+
+
+
+Library
+=======
+
+
+xml data binding / C++ tree mapping
+This is only needed to generate C++ tree from the XML schema
+Compiled C++ tree is included in the source
+ 
+apt-get install xsdcxx
+
+
+apt-get install libxerces-c-dev
+
+
+libxml2 (no more used, but maintain for history)
+apt-get install libxml2-dev
+
