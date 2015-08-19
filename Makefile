@@ -30,7 +30,7 @@ BCM2835_SRC = bcm2835.c
 
 
 SRCS = $(addprefix $(BCM2835_SRC_DIR)/,$(BCM2835_SRC))
-SRCS += smbus.c 
+SRCS += smbus.c log_utils.c
 
 CXXSRCS += tcs34725.cpp
 CXXSRCS += $(addprefix $(RUNNING_AVERAGE_SRC_DIR),RunningAverage.cpp)
