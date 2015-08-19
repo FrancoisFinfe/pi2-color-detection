@@ -43,7 +43,6 @@ uint16_t normalise_max_rgb;
 tcs34725 *tcs;
 
 
-
 int init(void){
 	int res = 0;
 	int i;
@@ -101,16 +100,19 @@ void detect_color_it(void) {
   color[CLEAR] = ra[CLEAR].getAverage();
 
   hsv_t hsv = tcs->calculateRgbInt2Hsv(color[RED], color[GREEN], color[BLUE], normalise_max_rgb);
+  hsl_t hsl = tcs->calculateRgbInt2Hsl(color[RED], color[GREEN], color[BLUE], normalise_max_rgb);
 
   printf("\e[0;0H");
   
 
-  printf("R: \e[01;31m%6d\e[00;37m G \e[01;32m%6d\e[00;37m B \e[01;34m%6d\e[00;37m C \e[01;37m%6d\e[00;37m\n",
+  printf("R: \e[01;31m%9d\e[00;37m G: \e[01;32m%9d\e[00;37m B: \e[01;34m%9d\e[00;37m :C \e[01;37m%9d\e[00;37m\n",
 		color[RED],color[GREEN],color[BLUE],color[CLEAR]);
 	
-  printf("H: \e[01;31m%0.5f\e[00;37m S \e[01;32m%0.5f\e[00;37m V \e[01;34m%0.5f\e[00;37m \n",
+  printf("H: \e[01;31m%9.5f\e[00;37m S: \e[01;32m%9.5f\e[00;37m V: \e[01;34m%9.5f\e[00;37m \n",
 		hsv.h, hsv.s, hsv.v);
 
+  printf("H: \e[01;31m%9.5f\e[00;37m S: \e[01;32m%9.5f\e[00;37m L: \e[01;34m%9.5f\e[00;37m \n",
+		hsl.h, hsl.s, hsl.l);
  
   if(color[CLEAR] > 1000){
     
@@ -124,11 +126,53 @@ void detect_color_it(void) {
   }
  
 
+	fflush(stdout);
+
  
 }
 
 
 
+
+int waitKeyPress(uint32_t timeout_second){
+   fd_set fdset;
+   struct timeval timeout;
+   int  rc;
+   int  val;
+
+	printf("Press any key to continue (timeout = %d s)", timeout_second);
+	fflush(stdout);
+
+   timeout.tv_sec = timeout_second;   /* wait for 6 seconds for data */
+   timeout.tv_usec = 0;
+
+
+   FD_ZERO(&fdset);
+
+   FD_SET(STDIN_FILENO, &fdset);
+
+   rc = select(1, &fdset, NULL, NULL, &timeout);
+   if (rc == -1)  /* select failed */
+   {
+		val = -1;
+   }
+   else if (rc == 0)  /* select timed out */
+   {
+		val = 0;
+   }
+   else 
+   {
+      if (FD_ISSET(STDIN_FILENO, &fdset)) 
+      {
+         val = getchar();
+      }
+   }
+
+	printf("\n");
+
+	return val;
+
+}
 
 
 void command_usage(void){
@@ -150,6 +194,7 @@ int main(int argc, char **argv)
 	int i,c;
 	int res;
 
+	
 
 	while((c = getopt(argc, argv, "c:d:h")) != -1) {
 		switch(c){
@@ -184,7 +229,7 @@ int main(int argc, char **argv)
 
 	init_average();
 
-	sleep(1);
+	waitKeyPress(10);
 	printf("\e[2J"); // clear screen
 
 
