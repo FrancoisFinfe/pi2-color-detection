@@ -4,16 +4,19 @@
 #include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <limits.h>
 #include <math.h>
 #include "tcs34725.h"
 
 #include "RunningAverage.h"
 #include "configuration.hpp"
 
-#define AverageSamples 5
+#undef COLOR_AVERAGE_SAMPLES
 
+
+const char *default_config_file_path = (char *) "settings.xml";
 const char *prog	= "pi2-color-detection";
-char *config_file_path = (char *) "settings.xml";
+char config_file_path[PATH_MAX] = {0};
 char *i2c_dev_name = (char *) "/dev/i2c-1";
 
 // Colors
@@ -27,9 +30,12 @@ enum color_e {
 uint16_t measure[4];
 uint16_t color[4];
 
-// Running average
-RunningAverage ra[4] = {RunningAverage(AverageSamples),RunningAverage(AverageSamples),RunningAverage(AverageSamples),RunningAverage(AverageSamples)};
+#ifdef COLOR_AVERAGE_SAMPLES
 
+// Running average
+RunningAverage ra[4] = {RunningAverage(COLOR_AVERAGE_SAMPLES),RunningAverage(COLOR_AVERAGE_SAMPLES),RunningAverage(COLOR_AVERAGE_SAMPLES),RunningAverage(COLOR_AVERAGE_SAMPLES)};
+
+#endif
 // this array converts user pin number to bcm2835
 // e.g. user bit 1 -->  user_bcm2835_pin_lut[1] => 17 bcm2835 pin
 uint8_t user_bcm2835_pin_lut[] = {
@@ -104,10 +110,31 @@ void convert_color_configs_user_to_bcm2835(color_config_t *configs, int array_si
 }
 
 
+/* if conf_file is null, this function will set the default value for */
+
+void define_default_file_path(char conf_file[PATH_MAX]){
+	char *c;
+
+	if(!strlen(conf_file)){
+		size_t len = readlink("/proc/self/exe", conf_file, PATH_MAX-1);
+		conf_file[len] = '\0';
+		// will return the executable path
+
+		//remove file name, keep only the dir
+		c = strrchr(conf_file, '/');
+
+		if(c){
+			*(c+1) = '\0';	// next char after the last "\"
+			strcat(conf_file, default_config_file_path);
+		}else{
+			strcpy(conf_file, default_config_file_path);
+		}
+	}
+
+}
 
 int init(void){
 	int res = 0;
-	int i;
 
 	if (!bcm2835_init()) {
 		printf("bcm2835 init failed\n");
@@ -119,6 +146,7 @@ int init(void){
 #endif
 
 #if 0
+	int i;
 	for(i=0; i<EHW298_GPIO_COUNT; i++){
 		bcm2835_gpio_fsel(user_bcm2835_pin_lut[i], BCM2835_GPIO_FSEL_OUTP);
 	}
@@ -154,6 +182,7 @@ int init(void){
 
 }
 
+#ifdef COLOR_AVERAGE_SAMPLES
 
 void init_average(void) {
   ra[RED].clear();
@@ -162,6 +191,7 @@ void init_average(void) {
   ra[CLEAR].clear();
 }
 
+#endif
 
 
 void set_gpio_color(const color_config_t *color) {
@@ -177,10 +207,12 @@ color_config_t *find_matching_color(const hsl_t *hsl) {
 	for(i=0 ; i< (COLOR_CONFIG_COUNT-1) ; i++){
 		cur = &color_configs[i];
 
-		if ((hsl->h > cur->hue.min) &&
-			(hsl->h < cur->hue.max) &&
-			(hsl->l > cur->lum.min) &&
-			(hsl->l < cur->lum.max)) {
+		if ( (((cur->hue.min <= cur->hue.max) &&  (hsl->h > cur->hue.min) && (hsl->h < cur->hue.max)) ||
+			  ((cur->hue.min >  cur->hue.max) && ((hsl->h > cur->hue.min) || (hsl->h < cur->hue.max)))) && /* e.g. min = 350° max 10°, red */
+			 (hsl->s > cur->sat.min) &&
+			 (hsl->s < cur->sat.max) &&
+			 (hsl->l > cur->lum.min) &&
+			 (hsl->l < cur->lum.max)) {
 
 			if(!found)
 				found = cur;
@@ -212,7 +244,9 @@ color_config_t *find_matching_color(const hsl_t *hsl) {
 void detect_color_it(int verbose) {
 
 	color_config_t *match_color;
+#ifdef COLOR_AVERAGE_SAMPLES
 	tcs->getRawData(&measure[RED], &measure[GREEN], &measure[BLUE], &measure[CLEAR]);
+
 
 	ra[RED].addValue(measure[RED]);
 	ra[GREEN].addValue(measure[GREEN]);
@@ -224,6 +258,9 @@ void detect_color_it(int verbose) {
 	color[BLUE] = ra[BLUE].getAverage();
 	color[CLEAR] = ra[CLEAR].getAverage();
 
+#else
+	tcs->getRawData(&color[RED], &color[GREEN], &color[BLUE], &color[CLEAR]);
+#endif
 	hsv_t hsv = tcs->calculateRgbInt2Hsv(color[RED], color[GREEN], color[BLUE], normalise_max_rgb);
 	hsl_t hsl = tcs->calculateRgbInt2Hsl(color[RED], color[GREEN], color[BLUE], normalise_max_rgb);
 
@@ -324,8 +361,8 @@ int waitKeyPress(uint32_t timeout_second){
 void command_usage(void){
 	printf("usage:  %s [options]\n", prog);
 	printf("Options are:\n");
-	printf(" -h              help\n");
-	printf(" -c conf_file    xml config file path (default = settings.xml)\n");
+	printf(" -h             help\n");
+	printf(" -c conf_file   xml config file path (default = settings.xml)\n");
 	printf(" -d i2c_dev     i2c dev name (default = /dev/i2c-1)\n");
 	printf(" -s             silent mode (don't dumb output value)\n");
 
@@ -347,7 +384,7 @@ int main(int argc, char **argv)
 	while((c = getopt(argc, argv, "c:d:hs")) != -1) {
 		switch(c){
 			case 'c':
-				config_file_path = optarg;
+				strcpy(config_file_path, optarg);
 				break;
 			case 's':
 				silent_mode = 1;
@@ -366,6 +403,8 @@ int main(int argc, char **argv)
 		}
 	}
 
+	define_default_file_path(config_file_path);
+
 	printf("Config file: %s\n", config_file_path);
 	printf("I2C-dev device name: %s\n", i2c_dev_name);
 	
@@ -377,7 +416,9 @@ int main(int argc, char **argv)
 		return res;
 	}
 
+#ifdef COLOR_AVERAGE_SAMPLES
 	init_average();
+#endif
 
 	waitKeyPress(10);
 
