@@ -214,6 +214,7 @@ color_config_t *find_matching_color(const hsl_t *hsl) {
 			 (hsl->l > cur->lum.min) &&
 			 (hsl->l < cur->lum.max)) {
 
+
 			if(!found)
 				found = cur;
 			else{
