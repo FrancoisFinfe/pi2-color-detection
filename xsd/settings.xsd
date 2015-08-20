@@ -11,6 +11,7 @@
 	<xs:complexType name="color_xt">
 		<xs:sequence>
 			<xs:element name="hue" type="float_spec_xt"/>
+			<xs:element name="sat" type="float_spec_xt"/>
 			<xs:element name="lum" type="float_spec_xt"/>
 		</xs:sequence>
 		<xs:attribute name="description" type="xs:string" use="required"/>

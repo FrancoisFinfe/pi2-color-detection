@@ -107,6 +107,30 @@ hue (::std::auto_ptr< hue_type > x)
   this->hue_.set (x);
 }
 
+const color_xt::sat_type& color_xt::
+sat () const
+{
+  return this->sat_.get ();
+}
+
+color_xt::sat_type& color_xt::
+sat ()
+{
+  return this->sat_.get ();
+}
+
+void color_xt::
+sat (const sat_type& x)
+{
+  this->sat_.set (x);
+}
+
+void color_xt::
+sat (::std::auto_ptr< sat_type > x)
+{
+  this->sat_.set (x);
+}
+
 const color_xt::lum_type& color_xt::
 lum () const
 {
@@ -308,12 +332,14 @@ float_spec_xt::
 
 color_xt::
 color_xt (const hue_type& hue,
+          const sat_type& sat,
           const lum_type& lum,
           const description_type& description,
           const gpio_value_type& gpio_value,
           const gpio_mask_type& gpio_mask)
 : ::xml_schema::type (),
   hue_ (hue, ::xml_schema::flags (), this),
+  sat_ (sat, ::xml_schema::flags (), this),
   lum_ (lum, ::xml_schema::flags (), this),
   description_ (description, ::xml_schema::flags (), this),
   gpio_value_ (gpio_value, ::xml_schema::flags (), this),
@@ -323,12 +349,14 @@ color_xt (const hue_type& hue,
 
 color_xt::
 color_xt (::std::auto_ptr< hue_type >& hue,
+          ::std::auto_ptr< sat_type >& sat,
           ::std::auto_ptr< lum_type >& lum,
           const description_type& description,
           const gpio_value_type& gpio_value,
           const gpio_mask_type& gpio_mask)
 : ::xml_schema::type (),
   hue_ (hue, ::xml_schema::flags (), this),
+  sat_ (sat, ::xml_schema::flags (), this),
   lum_ (lum, ::xml_schema::flags (), this),
   description_ (description, ::xml_schema::flags (), this),
   gpio_value_ (gpio_value, ::xml_schema::flags (), this),
@@ -342,6 +370,7 @@ color_xt (const color_xt& x,
           ::xml_schema::container* c)
 : ::xml_schema::type (x, f, c),
   hue_ (x.hue_, f, this),
+  sat_ (x.sat_, f, this),
   lum_ (x.lum_, f, this),
   description_ (x.description_, f, this),
   gpio_value_ (x.gpio_value_, f, this),
@@ -355,6 +384,7 @@ color_xt (const ::xercesc::DOMElement& e,
           ::xml_schema::container* c)
 : ::xml_schema::type (e, f | ::xml_schema::flags::base, c),
   hue_ (f, this),
+  sat_ (f, this),
   lum_ (f, this),
   description_ (f, this),
   gpio_value_ (f, this),
@@ -391,6 +421,20 @@ parse (::xsd::cxx::xml::dom::parser< char >& p,
       }
     }
 
+    // sat
+    //
+    if (n.name () == "sat" && n.namespace_ ().empty ())
+    {
+      ::std::auto_ptr< sat_type > r (
+        sat_traits::create (i, f, this));
+
+      if (!sat_.present ())
+      {
+        this->sat_.set (r);
+        continue;
+      }
+    }
+
     // lum
     //
     if (n.name () == "lum" && n.namespace_ ().empty ())
@@ -412,6 +456,13 @@ parse (::xsd::cxx::xml::dom::parser< char >& p,
   {
     throw ::xsd::cxx::tree::expected_element< char > (
       "hue",
+      "");
+  }
+
+  if (!sat_.present ())
+  {
+    throw ::xsd::cxx::tree::expected_element< char > (
+      "sat",
       "");
   }
 

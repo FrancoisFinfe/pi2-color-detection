@@ -321,6 +321,23 @@ class color_xt: public ::xml_schema::type
   void
   hue (::std::auto_ptr< hue_type > p);
 
+  // sat
+  // 
+  typedef ::float_spec_xt sat_type;
+  typedef ::xsd::cxx::tree::traits< sat_type, char > sat_traits;
+
+  const sat_type&
+  sat () const;
+
+  sat_type&
+  sat ();
+
+  void
+  sat (const sat_type& x);
+
+  void
+  sat (::std::auto_ptr< sat_type > p);
+
   // lum
   // 
   typedef ::float_spec_xt lum_type;
@@ -386,12 +403,14 @@ class color_xt: public ::xml_schema::type
   // Constructors.
   //
   color_xt (const hue_type&,
+            const sat_type&,
             const lum_type&,
             const description_type&,
             const gpio_value_type&,
             const gpio_mask_type&);
 
   color_xt (::std::auto_ptr< hue_type >&,
+            ::std::auto_ptr< sat_type >&,
             ::std::auto_ptr< lum_type >&,
             const description_type&,
             const gpio_value_type&,
@@ -421,6 +440,7 @@ class color_xt: public ::xml_schema::type
 
   protected:
   ::xsd::cxx::tree::one< hue_type > hue_;
+  ::xsd::cxx::tree::one< sat_type > sat_;
   ::xsd::cxx::tree::one< lum_type > lum_;
   ::xsd::cxx::tree::one< description_type > description_;
   ::xsd::cxx::tree::one< gpio_value_type > gpio_value_;
