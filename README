@@ -18,7 +18,6 @@ How to build
 	make make pi2-color-detection
 	make blink-example
 	
-This will build the 
 
 
 
@@ -45,3 +44,19 @@ apt-get install libxerces-c-dev
 libxml2 (no more used, but maintain for history)
 apt-get install libxml2-dev
 
+
+System device
+=============
+
+To map raspberry pi SoC (bcm2835) register:
+/dev/mem
+
+I2C bus interface:
+/dev/i2c-??
+
+As remainder:
+Enable I2C 1 in the kernel device tree
+
+Modify /etc/modules and add the following lines (modules):
+i2c_bcm2708
+i2c_dev
