@@ -74,6 +74,9 @@ int configuration_get(configuration_context_t *ctx, color_config_t *c_config, in
 		c_config[index].hue.min = color.hue().min();
 		c_config[index].hue.max = color.hue().max();
 
+		c_config[index].sat.min = color.sat().min();
+		c_config[index].sat.max = color.sat().max();
+
 		c_config[index].lum.min = color.lum().min();
 		c_config[index].lum.max = color.lum().max();
 
@@ -81,11 +84,13 @@ int configuration_get(configuration_context_t *ctx, color_config_t *c_config, in
 		c_config[index].gpio_value = color.gpio_value();
 
 
-		log_print(INFO, ctx->verbo, "%s: color %d \"%s\", hue min %f, hue max %f, lum min %f, lum max %f, gpio_mask %x, gpio_value %x\n",
-				__FUNCTION__ , index-1,
+		log_print(INFO, ctx->verbo, "%s: color %d \"%s\", hue min %f max %f, sat min %f max %f, lum min %f max %f, gpio_mask %x, gpio_value %x\n",
+				__FUNCTION__ , index,
 				c_config[index].name,
 				c_config[index].hue.min,
 				c_config[index].hue.max,
+				c_config[index].sat.min,
+				c_config[index].sat.max,
 				c_config[index].lum.min,
 				c_config[index].lum.max,
 				c_config[index].gpio_mask,
@@ -95,9 +100,11 @@ int configuration_get(configuration_context_t *ctx, color_config_t *c_config, in
 		if(b_index != -1){
 			index = b_index;
 			b_index = -1;
+		}else{
+			index++;
 		}
 
-		index++;
+
 	}
 
 	for(i=index; i<(array_size-1); i++){

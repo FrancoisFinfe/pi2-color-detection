@@ -32,7 +32,9 @@ typedef struct color_config_s{
 
 
 	float_spec_t hue;
+	float_spec_t sat;
 	float_spec_t lum;
+
 } color_config_t;
 
 
