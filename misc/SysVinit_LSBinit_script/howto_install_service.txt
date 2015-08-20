@@ -1,0 +1,17 @@
+
+Copy the script in /etc/init.d/ & make it executable (755)
+==========================================================
+cp color-detection.sh /etc/init.d/
+
+
+update symbolic link of System-V
+================================
+
+update-rc color-detection.sh defaults
+
+
+To remove 
+=========
+
+update-rc.d -f color-detection.sh remove
+

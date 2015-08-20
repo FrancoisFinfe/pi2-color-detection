@@ -1,18 +1,20 @@
 #!/bin/sh
 ### BEGIN INIT INFO
 # Provides:          <NAME>
-# Required-Start:    $local_fs $network $named $time $syslog
-# Required-Stop:     $local_fs $network $named $time $syslog
+# Required-Start:    $local_fs
+# Required-Stop:     $local_fs
 # Default-Start:     2 3 4 5
 # Default-Stop:      0 1 6
 # Description:       <DESCRIPTION>
 ### END INIT INFO
 
-SCRIPT=<COMMAND>
-RUNAS=<USERNAME>
 
-PIDFILE=/var/run/<NAME>.pid
-LOGFILE=/var/log/<NAME>.log
+
+SCRIPT="/home/pi/source/pi2-color-detection/pi2-color-detection -s"
+RUNAS=root
+
+PIDFILE=/var/run/color-detection.pid
+LOGFILE=/var/log/color-detection.log
 
 start() {
   if [ -f /var/run/$PIDNAME ] && kill -0 $(cat /var/run/$PIDNAME); then
