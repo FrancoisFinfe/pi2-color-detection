@@ -53,14 +53,21 @@ int configuration_init(configuration_context_t *ctx, const char *config_file_pat
 
 int configuration_get(configuration_context_t *ctx, color_config_t *c_config, int array_size){
 
-	int index=0, i;
+	int index = 0,b_index = -1, i;
 	::pi2_color_detect_config::color_sequence& cs (ctx->conf->color());
 
 	::pi2_color_detect_config::color_iterator it (cs.begin());
 
 
-	for(; it != cs.end() && index++ < array_size ; ++it) {
+	for(; it != cs.end() && index < array_size ; ++it) {
 		::pi2_color_detect_config::color_type& color(*it);
+
+
+		if(color.description() == "none") {
+			// none element found, backup current index and set index to point the last element of array
+			b_index = index;
+			index = array_size-1;
+		}
 
 		strncpy(c_config[index].name, color.description().c_str(), sizeof(c_config[0].name) );
 
@@ -85,9 +92,15 @@ int configuration_get(configuration_context_t *ctx, color_config_t *c_config, in
 				c_config[index].gpio_value
 				);
 
+		if(b_index != -1){
+			index = b_index;
+			b_index = -1;
+		}
+
+		index++;
 	}
 
-	for(i=index; i<array_size ; i++){
+	for(i=index; i<(array_size-1); i++){
 		memset(&c_config[i], 0, sizeof(color_config_t));
 	}
 
@@ -100,7 +113,8 @@ int configuration_get(configuration_context_t *ctx, color_config_t *c_config, in
 
 
 void configuration_free(configuration_context_t *ctx){
-
+	/* reset will call delete method and assign null value to null*/
+	ctx->conf.reset();
 }
 
 

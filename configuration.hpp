@@ -21,9 +21,15 @@ typedef struct float_spec_s{
 
 
 typedef struct color_config_s{
-	char name[128];
-	unsigned int gpio_value;
+	char name[64];
+	unsigned int gpio_value;	// "user" gpio bit assignment (config)
 	unsigned int gpio_mask;
+	/* bcm2835 gpio bit assignment. This is not a configuration parameter.
+	 * After reading the config, gpio_value is converted to bcm2835_gpio_value
+	 */
+	unsigned int bcm2835_gpio_value;
+	unsigned int bcm2835_gpio_mask;
+
 
 	float_spec_t hue;
 	float_spec_t lum;
