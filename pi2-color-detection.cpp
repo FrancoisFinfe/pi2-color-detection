@@ -4,6 +4,7 @@
 #include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <math.h>
 #include "tcs34725.h"
 
 #include "RunningAverage.h"
@@ -29,8 +30,9 @@ uint16_t color[4];
 // Running average
 RunningAverage ra[4] = {RunningAverage(AverageSamples),RunningAverage(AverageSamples),RunningAverage(AverageSamples),RunningAverage(AverageSamples)};
 
-
-uint8_t ehw298_bcm2835_pin[] = {
+// this array converts user pin number to bcm2835
+// e.g. user bit 1 -->  user_bcm2835_pin_lut[1] => 17 bcm2835 pin
+uint8_t user_bcm2835_pin_lut[] = {
 	4, 17, 18, 27, 22, 23, 24, 25,
 	5, 6, 12, 13, 19, 16, 26, 20
 };
@@ -38,13 +40,70 @@ uint8_t ehw298_bcm2835_pin[] = {
 
 
 #define EHW298_GPIO_COUNT	4
-#define COLOR_CONFIG_COUNT	8
-
+#define COLOR_CONFIG_COUNT	9
+#define ACT_TOGGLE_LED		3
 uint16_t normalise_max_rgb;
 tcs34725 *tcs;
 configuration_context_t config_ctx;
 
 color_config_t color_configs[COLOR_CONFIG_COUNT];
+
+/* The last element must be the "none color" configuration
+ * If the detected color doesn't match to any configured color,
+ * the none config is "applied".
+ * Only gpio_val & gpio_mask of none config are used by program, other are ignored
+ */
+
+
+
+
+color_config_t* find_color_config_by_name(const char *name){
+	int i;
+
+	for(i=0 ; i<COLOR_CONFIG_COUNT ; i++){
+		if (!strncmp(name, color_configs[i].name, strlen(name)))
+			return &color_configs[i];
+	}
+
+	/* no config found */
+
+	return NULL;
+
+}
+
+
+
+
+void convert_gpio_user_to_bcm2835(uint32_t user, uint32_t *bcm2835){
+	int i;
+
+	*bcm2835 = 0;
+
+	for(i=0 ; i < (EHW298_GPIO_COUNT > 32 ? 32 : EHW298_GPIO_COUNT) && user ; i++){
+		if(user&1){
+			*bcm2835 |= 1 << user_bcm2835_pin_lut[i];
+		}
+
+		user >>= 1;
+	}
+
+
+}
+
+
+
+void convert_color_configs_user_to_bcm2835(color_config_t *configs, int array_size){
+	int i;
+
+
+	for(i=0 ; i< array_size ; i++){
+		convert_gpio_user_to_bcm2835(configs[i].gpio_value, &configs[i].bcm2835_gpio_value);
+		convert_gpio_user_to_bcm2835(configs[i].gpio_mask, &configs[i].bcm2835_gpio_mask);
+	}
+
+}
+
+
 
 int init(void){
 	int res = 0;
@@ -55,9 +114,15 @@ int init(void){
 		return -1;
 	}
 
+#ifdef ACT_TOGGLE_LED
+	bcm2835_gpio_fsel(user_bcm2835_pin_lut[ACT_TOGGLE_LED], BCM2835_GPIO_FSEL_OUTP);
+#endif
+
+#if 0
 	for(i=0; i<EHW298_GPIO_COUNT; i++){
-		bcm2835_gpio_fsel(ehw298_bcm2835_pin[i], BCM2835_GPIO_FSEL_OUTP);	
+		bcm2835_gpio_fsel(user_bcm2835_pin_lut[i], BCM2835_GPIO_FSEL_OUTP);
 	}
+#endif
 
 
 
@@ -80,6 +145,9 @@ int init(void){
 
 	configuration_get(&config_ctx, color_configs, COLOR_CONFIG_COUNT);
 
+	convert_color_configs_user_to_bcm2835(&color_configs[0], COLOR_CONFIG_COUNT);
+
+
 	return res;
 		
 
@@ -96,46 +164,113 @@ void init_average(void) {
 
 
 
-void detect_color_it(void) {
+void set_gpio_color(const color_config_t *color) {
+	bcm2835_gpio_set_output_mask(color->bcm2835_gpio_mask);
+	bcm2835_gpio_write_mask(color->bcm2835_gpio_value, color->bcm2835_gpio_mask);
+}
 
-  tcs->getRawData(&measure[RED], &measure[GREEN], &measure[BLUE], &measure[CLEAR]);
- 
-  ra[RED].addValue(measure[RED]);
-  ra[GREEN].addValue(measure[GREEN]);
-  ra[BLUE].addValue(measure[BLUE]);
-  ra[CLEAR].addValue(measure[CLEAR]);
- 
-  color[RED] = ra[RED].getAverage();
-  color[GREEN] = ra[GREEN].getAverage();
-  color[BLUE] = ra[BLUE].getAverage();
-  color[CLEAR] = ra[CLEAR].getAverage();
+color_config_t *find_matching_color(const hsl_t *hsl) {
+	color_config_t *found = NULL;
+	color_config_t *cur = NULL;
+	int i;
 
-  hsv_t hsv = tcs->calculateRgbInt2Hsv(color[RED], color[GREEN], color[BLUE], normalise_max_rgb);
-  hsl_t hsl = tcs->calculateRgbInt2Hsl(color[RED], color[GREEN], color[BLUE], normalise_max_rgb);
+	for(i=0 ; i< (COLOR_CONFIG_COUNT-1) ; i++){
+		cur = &color_configs[i];
 
-  printf("\e[0;0H");
-  
+		if ((hsl->h > cur->hue.min) &&
+			(hsl->h < cur->hue.max) &&
+			(hsl->l > cur->lum.min) &&
+			(hsl->l < cur->lum.max)) {
 
-  printf("R: \e[01;31m%9d\e[00;37m G: \e[01;32m%9d\e[00;37m B: \e[01;34m%9d\e[00;37m :C \e[01;37m%9d\e[00;37m\n",
-		color[RED],color[GREEN],color[BLUE],color[CLEAR]);
+			if(!found)
+				found = cur;
+			else{
+				/* if another color was found previously, chose the closest in hue */
+				double hue_cur;
+				double hue_found;
+				hue_cur = (cur->hue.min + cur->hue.max) /2;
+				hue_found = (found->hue.min + found->hue.max) /2;
+
+
+				if( fabs(hsl->h - hue_cur) < fabs(hsl->h - hue_found) ){
+					found = cur;
+				}
+			}
+		}
+
+	}
+
+	/* if no color found, return none element */
+	if(!found)
+		found = &color_configs[COLOR_CONFIG_COUNT - 1];
+
+	return found;
+
+}
+
+
+void detect_color_it(int verbose) {
+
+	color_config_t *match_color;
+	tcs->getRawData(&measure[RED], &measure[GREEN], &measure[BLUE], &measure[CLEAR]);
+
+	ra[RED].addValue(measure[RED]);
+	ra[GREEN].addValue(measure[GREEN]);
+	ra[BLUE].addValue(measure[BLUE]);
+	ra[CLEAR].addValue(measure[CLEAR]);
+
+	color[RED] = ra[RED].getAverage();
+	color[GREEN] = ra[GREEN].getAverage();
+	color[BLUE] = ra[BLUE].getAverage();
+	color[CLEAR] = ra[CLEAR].getAverage();
+
+	hsv_t hsv = tcs->calculateRgbInt2Hsv(color[RED], color[GREEN], color[BLUE], normalise_max_rgb);
+	hsl_t hsl = tcs->calculateRgbInt2Hsl(color[RED], color[GREEN], color[BLUE], normalise_max_rgb);
+
+	match_color = find_matching_color(&hsl);
+
+	if(verbose){
+		printf("\e[2J"); // clear screen
+		printf("\e[0;0H");
+
+
+		printf("R: \e[01;31m%9d\e[00;37m G: \e[01;32m%9d\e[00;37m B: \e[01;34m%9d\e[00;37m :C \e[01;37m%9d\e[00;37m\n",
+			color[RED],color[GREEN],color[BLUE],color[CLEAR]);
+
+		printf("H: \e[01;31m%9.5f\e[00;37m S: \e[01;32m%9.5f\e[00;37m V: \e[01;34m%9.5f\e[00;37m \n",
+			hsv.h, hsv.s, hsv.v);
 	
-  printf("H: \e[01;31m%9.5f\e[00;37m S: \e[01;32m%9.5f\e[00;37m V: \e[01;34m%9.5f\e[00;37m \n",
-		hsv.h, hsv.s, hsv.v);
+		printf("H: \e[01;31m%9.5f\e[00;37m S: \e[01;32m%9.5f\e[00;37m L: \e[01;34m%9.5f\e[00;37m \n",
+			hsl.h, hsl.s, hsl.l);
 
-  printf("H: \e[01;31m%9.5f\e[00;37m S: \e[01;32m%9.5f\e[00;37m L: \e[01;34m%9.5f\e[00;37m \n",
-		hsl.h, hsl.s, hsl.l);
+		if(match_color){
+			printf("\nCurrent color: \e[01;37m\"%s\"\e[00;37m, gpio: %x, mask: %x",
+					match_color->name,
+					match_color->gpio_value,
+					match_color->gpio_mask);
+		}
+	}
  
+
+
+	if(match_color) {
+		set_gpio_color(match_color);
+	}
+
+  /*
   if(color[CLEAR] > 1000){
     
-/*
+
     if(color[RED] > 2*color[GREEN] && color[RED] > 2*color[BLUE])
       printf("RED!");
     else if(color[RED] > 2*color[BLUE] && color[GREEN] > 2*color[BLUE])
       printf("YELLOW!");
     else if(color[BLUE] > color[RED] && color[BLUE] > color[GREEN])
-      printf("BLUE!");*/
+      printf("BLUE!");
+
+
   }
- 
+   */
 
 	fflush(stdout);
 
@@ -190,8 +325,10 @@ void command_usage(void){
 	printf("usage:  %s [options]\n", prog);
 	printf("Options are:\n");
 	printf(" -h              help\n");
-	printf(" -c              xml config file path (default = settings.xml)\n");
-	printf(" -d              i2c dev name (default = /dev/i2c-1)\n");
+	printf(" -c conf_file    xml config file path (default = settings.xml)\n");
+	printf(" -d i2c_dev     i2c dev name (default = /dev/i2c-1)\n");
+	printf(" -s             silent mode (don't dumb output value)\n");
+
 
 }
 
@@ -202,16 +339,18 @@ int main(int argc, char **argv)
 	// If you call this, it will not actually access the GPIO
 	// Use for testing
 	//    bcm2835_set_debug(1);
-	int i,c;
+	int i,c, silent_mode = 0;
 	int res;
 
 	
 
-	while((c = getopt(argc, argv, "c:d:h")) != -1) {
+	while((c = getopt(argc, argv, "c:d:hs")) != -1) {
 		switch(c){
 			case 'c':
 				config_file_path = optarg;
-
+				break;
+			case 's':
+				silent_mode = 1;
 				break;
 			case 'd':
 				i2c_dev_name = optarg;
@@ -241,19 +380,20 @@ int main(int argc, char **argv)
 	init_average();
 
 	waitKeyPress(10);
-	printf("\e[2J"); // clear screen
+
 
 
     // Blink
     while (1)
     {
 			// Turn it on
-			bcm2835_gpio_write(ehw298_bcm2835_pin[3], (i++)&1 ? HIGH : LOW);
-	
+#ifdef ACT_TOGGLE_LED
+			bcm2835_gpio_write(user_bcm2835_pin_lut[ACT_TOGGLE_LED], (i++)&1 ? HIGH : LOW);
+#endif
 			// wait a bit
 			usleep(1*1000);
 			
-			detect_color_it();
+			detect_color_it(silent_mode ? 0 : 1);
 	
 	
     }
