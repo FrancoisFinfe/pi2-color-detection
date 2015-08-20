@@ -175,7 +175,7 @@ int init(void){
 
 	convert_color_configs_user_to_bcm2835(&color_configs[0], COLOR_CONFIG_COUNT);
 
-
+	configuration_free(&config_ctx);
 	return res;
 		
 

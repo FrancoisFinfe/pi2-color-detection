@@ -46,6 +46,7 @@ typedef struct configuration_context{
 
 int configuration_init(configuration_context_t *ctx, const char *config_file_path, message_type_t verbosity);
 int configuration_get(configuration_context_t *ctx, color_config_t *c_config, int array_size);
+void configuration_free(configuration_context_t *ctx);
 
 #ifdef __cplusplus
 }
