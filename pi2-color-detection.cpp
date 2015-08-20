@@ -107,7 +107,7 @@ void convert_color_configs_user_to_bcm2835(color_config_t *configs, int array_si
 
 int init(void){
 	int res = 0;
-	int i;
+
 
 	if (!bcm2835_init()) {
 		printf("bcm2835 init failed\n");
@@ -119,6 +119,7 @@ int init(void){
 #endif
 
 #if 0
+	int i;
 	for(i=0; i<EHW298_GPIO_COUNT; i++){
 		bcm2835_gpio_fsel(user_bcm2835_pin_lut[i], BCM2835_GPIO_FSEL_OUTP);
 	}
@@ -179,6 +180,8 @@ color_config_t *find_matching_color(const hsl_t *hsl) {
 
 		if ((hsl->h > cur->hue.min) &&
 			(hsl->h < cur->hue.max) &&
+			(hsl->s > cur->sat.min) &&
+			(hsl->s < cur->sat.max) &&
 			(hsl->l > cur->lum.min) &&
 			(hsl->l < cur->lum.max)) {
 
