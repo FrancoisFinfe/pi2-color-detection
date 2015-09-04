@@ -490,7 +490,7 @@ int main(int argc, char **argv)
     while (1)
     {
 			// Turn it on
-#ifdef ACT_TOGGLE_LED
+#ifdef GPIO_ACT_TOGGLE_LED
 			bcm2835_gpio_write(user_bcm2835_pin_lut[GPIO_ACT_TOGGLE_LED], (i++)&1 ? HIGH : LOW);
 #endif
 			// wait a bit
