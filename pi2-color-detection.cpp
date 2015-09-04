@@ -44,10 +44,10 @@ uint8_t user_bcm2835_pin_lut[] = {
 };
 
 
-
-#define EHW298_GPIO_COUNT	4
-#define COLOR_CONFIG_COUNT	9
-#define ACT_TOGGLE_LED		3
+#define GPIO_TSC34725_LED			4
+#define EHW298_GPIO_COUNT			4
+#define COLOR_CONFIG_COUNT			9
+#define GPIO_ACT_TOGGLE_LED			3
 uint16_t normalise_max_rgb;
 tcs34725 *tcs;
 configuration_context_t config_ctx;
@@ -142,7 +142,11 @@ int init(void){
 	}
 
 #ifdef ACT_TOGGLE_LED
-	bcm2835_gpio_fsel(user_bcm2835_pin_lut[ACT_TOGGLE_LED], BCM2835_GPIO_FSEL_OUTP);
+	bcm2835_gpio_fsel(user_bcm2835_pin_lut[GPIO_ACT_TOGGLE_LED], BCM2835_GPIO_FSEL_OUTP);
+#endif
+
+#ifdef GPIO_TSC34725_LED
+	bcm2835_gpio_fsel(user_bcm2835_pin_lut[GPIO_TSC34725_LED], BCM2835_GPIO_FSEL_OUTP);
 #endif
 
 #if 0
@@ -198,6 +202,15 @@ void set_gpio_color(const color_config_t *color) {
 	bcm2835_gpio_set_output_mask(color->bcm2835_gpio_mask);
 	bcm2835_gpio_write_mask(color->bcm2835_gpio_value, color->bcm2835_gpio_mask);
 }
+
+void set_tsc34725_led(bool state) {
+
+#ifdef GPIO_TSC34725_LED
+	bcm2835_gpio_write(user_bcm2835_pin_lut[GPIO_TSC34725_LED], state ? LOW : HIGH);
+#endif
+
+}
+
 
 color_config_t *find_matching_color(const hsl_t *hsl) {
 	color_config_t *found = NULL;
@@ -295,20 +308,6 @@ void detect_color_it(int verbose) {
 		set_gpio_color(match_color);
 	}
 
-  /*
-  if(color[CLEAR] > 1000){
-    
-
-    if(color[RED] > 2*color[GREEN] && color[RED] > 2*color[BLUE])
-      printf("RED!");
-    else if(color[RED] > 2*color[BLUE] && color[GREEN] > 2*color[BLUE])
-      printf("YELLOW!");
-    else if(color[BLUE] > color[RED] && color[BLUE] > color[GREEN])
-      printf("BLUE!");
-
-
-  }
-   */
 
 	fflush(stdout);
 
@@ -366,10 +365,63 @@ void command_usage(void){
 	printf(" -c conf_file   xml config file path (default = settings.xml)\n");
 	printf(" -d i2c_dev     i2c dev name (default = /dev/i2c-1)\n");
 	printf(" -s             silent mode (don't dumb output value)\n");
+	printf(" -t             output test mode (toggle successively each output 5 times)\n");
 
 
 }
 
+
+
+int test_led_tsc34725(void){
+
+	int j;
+
+	while(1){
+		set_tsc34725_led(j&1);
+		j++;
+		sleep(1);
+		printf("j = %d\n", j);
+
+	}
+
+	return 0;
+
+}
+
+
+/* quick & dirty test/debbuging function
+ * This will toggle the first led 10 times, then the second,...
+ * If enabled, the TSC34725 led is also toggled at each cycle
+ */
+
+
+void test_dig_output(){
+
+	int j=0, output_number=0;
+
+	while(1){
+		usleep(500 * 1000);
+		bcm2835_gpio_fsel(user_bcm2835_pin_lut[output_number % EHW298_GPIO_COUNT], BCM2835_GPIO_FSEL_OUTP);
+		bcm2835_gpio_write(user_bcm2835_pin_lut[output_number % EHW298_GPIO_COUNT], (j&1) ? LOW : HIGH);
+
+#ifdef GPIO_TSC34725_LED
+		set_tsc34725_led(j&1);
+		printf("output number = %d, j = %d, tsc34725 led state = %d\n", output_number % EHW298_GPIO_COUNT, j&1, j&1);
+
+#else
+		printf("output number = %d, j = %d\n", output_number % EHW298_GPIO_COUNT, j&1, j&1);
+#endif
+
+		j++;
+
+		if (j%10 == 0)
+			output_number++;
+		
+
+	}
+
+
+}
 
 
 int main(int argc, char **argv)
@@ -377,12 +429,12 @@ int main(int argc, char **argv)
 	// If you call this, it will not actually access the GPIO
 	// Use for testing
 	//    bcm2835_set_debug(1);
-	int i,c, silent_mode = 0;
+	int i,c, silent_mode = 0, test_mode=0;
 	int res;
 
 	
 
-	while((c = getopt(argc, argv, "c:d:hs")) != -1) {
+	while((c = getopt(argc, argv, "c:d:ths")) != -1) {
 		switch(c){
 			case 'c':
 				strcpy(config_file_path, optarg);
@@ -392,6 +444,9 @@ int main(int argc, char **argv)
 				break;
 			case 'd':
 				i2c_dev_name = optarg;
+				break;
+			case 't':
+				test_mode = 1;
 				break;
 			case '?':
 			case 'h':
@@ -411,6 +466,12 @@ int main(int argc, char **argv)
 	
 
 	res = init();
+
+	/* Ignore initialisation test result, not very clean but could be useful when debugging
+     * if sensor is not wired */
+
+	if(test_mode == 1)
+		test_dig_output();
 	
 	if(res < 0) {
 		printf("Error: init failed\n");
@@ -430,7 +491,7 @@ int main(int argc, char **argv)
     {
 			// Turn it on
 #ifdef ACT_TOGGLE_LED
-			bcm2835_gpio_write(user_bcm2835_pin_lut[ACT_TOGGLE_LED], (i++)&1 ? HIGH : LOW);
+			bcm2835_gpio_write(user_bcm2835_pin_lut[GPIO_ACT_TOGGLE_LED], (i++)&1 ? HIGH : LOW);
 #endif
 			// wait a bit
 			usleep(1*1000);
@@ -443,5 +504,3 @@ int main(int argc, char **argv)
 	bcm2835_close();	
    return 0;
 }
-
-
