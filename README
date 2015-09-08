@@ -7,15 +7,115 @@ Options are:
  -h              help
  -c              xml config file path (default = settings.xml)
  -d              i2c dev name (default = /dev/i2c-1)
+ -s              silent mode (don't dumb output value)
+ -t              output test mode (toggle successively each output 5 times)
+
 
 Must be executed as root (sudo) to grant access to /dev/mem
+
+
+-c & -d are optional. The default values will be used if not specified.
+
+Silent mode (-s) will disable verbosity and will not report the current color (RGB,HSL + color detected).
+This mode is useful when the application is executed as a daemon, to not flood the output log file.
+
+Output test mode (-t) is used for debugging/testing the digital output and disable the standard mode (no color detection).
+
+
+
+Console output (samples)
+========================
+
+The console output prints the current color detected by the color sensor.
+This information is updated each time a color acquisition is done.
+
+R:       474 G:       442 B:       319 :C      1270
+H:  47.61290 S:   0.32700 V:   0.02314 
+H:  47.61290 S:   0.19546 L:   0.01936 
+
+Current color: "none", gpio: 7, mask: 7
+
+
+
+The first line are raw RGB value.
+The second line is HSV (hue, saturation, value).
+The third line is HSL (hue, saturation, luminosity).
+
+The application uses HSL value for color detection.
+
+
+
+The color detected by the sensor is compared with the color configured xml configuration file.
+
+If the current color matches one of the configured color, the gpio value & gpio mask is as output written on the raspberry pi GPIO.
+
+If no color match the configuration, the "none" color configuration is applied on the GPIO.
+
+The fourth line shows the current color detected & the associated gpio value & mask
+
+
+
+XML configuration file
+======================
+
+Here an example of xml configuration file:
+
+<?xml version="1.0" encoding="UTF-8"?>
+
+<pi2-color-detect-config>
+	<color description="none" gpio_value="7" gpio_mask="7">
+		<hue min="0.15" max="1"/>
+		<sat min="0.2" max="1"/>
+		<lum min="0.15" max="1"/>
+	</color>
+	
+	<color description="red" gpio_value="2" gpio_mask="7">
+		<hue min="0" max="8"/>
+		<sat min="0.4" max="1"/>
+		<lum min="0.02" max="0.2"/>
+	</color>
+</pi2-color-detect-config>
+
+For more details, see the schema in xsd/settings.xsd
+
+hue/sat/lum have two attributes: a minimum & maximum value.
+
+After each color acquisition, RGB value are converted to HSL.
+HSL (hue, sat, lum) are compared with each color configured.
+
+If a match is found (the current values must be between min & max value), the gpio value & mask are written on the gpio.
+
+
+
+The "none" color is mandatory. The application will generate an error if this element is not found.
+Only the gpio_value & gpio_mask are used in this element. 
+The other field (hue, sat, lum) must be present to make xml parsing possible but the program ignore the value.
+
+ 
+gpio_value & gpio_mask
+======================
+
+gpio_value & gpio_mask are bit field.
+
+Bit 0 corresponds to the first output, bit 1 to the second output and so on.
+
+Mask defines which GPIO must be configured as output.
+Value defines the value to write on that output.
+
+Example: 
+gpio_value="2" gpio_mask="7"
+
+gpio_mask =  7, in binary = 00000111, means output 0 to 2 (if the first output is numbered 0).
+gpio_value = 2, in binary = 00000010, means output 1 enabled, and other output (enabled by the mask) to 0 (output 0 & 2)
+
+
 
 
 How to build
 ============
 
 	make 
-	make make pi2-color-detection
+	make pi2-color-detection
 	make blink-example
 	
 
@@ -35,18 +135,18 @@ xml data binding / C++ tree mapping
 This is only needed to generate C++ tree from the XML schema
 Compiled C++ tree is included in the source
  
-apt-get install xsdcxx
+	apt-get install xsdcxx
 
 
-apt-get install libxerces-c-dev
+	apt-get install libxerces-c-dev
 
 
 libxml2 (no more used, but maintain for history)
-apt-get install libxml2-dev
+	apt-get install libxml2-dev
 
 
-System device
-=============
+Required system device
+======================
 
 To map raspberry pi SoC (bcm2835) register:
 /dev/mem
@@ -60,3 +160,7 @@ Enable I2C 1 in the kernel device tree
 Modify /etc/modules and add the following lines (modules):
 i2c_bcm2708
 i2c_dev
+
+
+
+
