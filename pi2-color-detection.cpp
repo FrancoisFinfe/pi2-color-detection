@@ -8,6 +8,9 @@
 #include <math.h>
 #include "tcs34725.h"
 
+#include "watchdog.h"
+#include <signal.h>
+
 #include "RunningAverage.h"
 #include "configuration.hpp"
 
@@ -60,7 +63,17 @@ color_config_t color_configs[COLOR_CONFIG_COUNT];
  * Only gpio_val & gpio_mask of none config are used by program, other are ignored
  */
 
+int stop_main_loop = 0; /* set this variable to > 0 to stop main program loop */
 
+
+
+void sig_handler(int signo)
+{
+	if (signo == SIGINT) {
+		/* signal interrupt received, stop main loop */
+		stop_main_loop = 1;
+	}
+}
 
 
 color_config_t* find_color_config_by_name(const char *name){
@@ -135,6 +148,10 @@ void define_default_file_path(char conf_file[PATH_MAX]){
 
 int init(void){
 	int res = 0;
+
+	if (signal(SIGINT, sig_handler) == SIG_ERR) {
+  		printf("	Cannot define SIGINT handler\n");
+	}
 
 	if (!bcm2835_init()) {
 		printf("bcm2835 init failed\n");
@@ -431,6 +448,7 @@ int main(int argc, char **argv)
 	//    bcm2835_set_debug(1);
 	int i,c, silent_mode = 0, test_mode=0;
 	int res;
+	watchdog_ctx_t wd_ctx;
 
 	
 
@@ -484,10 +502,15 @@ int main(int argc, char **argv)
 
 	waitKeyPress(10);
 
-
+	/* Now, we can enable the watchdog */
+	res = watchdog_init(&wd_ctx, NULL, 15);
+	if (res < 0) {
+		return res;	
+	}
+	sleep(1);
 
     // Blink
-    while (1)
+    while (!stop_main_loop)
     {
 			// Turn it on
 #ifdef GPIO_ACT_TOGGLE_LED
@@ -497,10 +520,11 @@ int main(int argc, char **argv)
 			usleep(1*1000);
 			
 			detect_color_it(silent_mode ? 0 : 1);
-	
+			watchdog_clear_if_timeout(&wd_ctx);	
 	
     }
 
+	watchdog_close(&wd_ctx);
 	bcm2835_close();	
    return 0;
 }

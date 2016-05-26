@@ -154,13 +154,17 @@ To map raspberry pi SoC (bcm2835) register:
 I2C bus interface:
 /dev/i2c-??
 
+
+Watchdof
+/dev/watchdog with nowayout option disabled (which was the default value for the kernel I had)
+
 As remainder:
 Enable I2C 1 in the kernel device tree
 
 Modify /etc/modules and add the following lines (modules):
 i2c_bcm2708
 i2c_dev
-
+bcm2708_wdog nowayout=0
 
 
 
